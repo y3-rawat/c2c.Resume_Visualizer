@@ -1,0 +1,1844 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.4/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.5/d3.layout.cloud.min.js"></script>
+    <title>Responsive Resume Analysis Dashboard</title>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+        body,
+        html {
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: 'Poppins', sans-serif;
+            background-color: #f0f0f0;
+        }
+
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1600px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .score-container {
+            text-align: center;
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 300px;
+            box-sizing: border-box;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .score-container:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .heading {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        .circle-progress {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 1rem;
+        }
+
+        .circle-progress svg {
+            transform: rotate(-90deg);
+        }
+
+        .circle-progress-background {
+            fill: none;
+            stroke: #e0e0e0;
+            stroke-width: 8;
+        }
+
+        .circle-progress-value {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease-out, stroke 1s ease-in-out;
+        }
+
+        .recommendation-item {
+            background-color: #f7fafc;
+            border-left: 4px solid #3b82f6;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0 8px 8px 0;
+            transition: all 0.3s ease;
+        }
+
+        .recommendation-item:hover {
+            background-color: #ebf4ff;
+            transform: translateX(5px);
+        }
+
+        .score {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .description {
+            font-size: 0.9rem;
+            color: #555;
+            margin: 0.5rem 0;
+            height: 2.7em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+
+        .hover-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(223, 223, 223, 0.834);
+            padding: 1rem;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .score-container:hover .hover-info {
+            transform: translateY(0);
+        }
+
+        .reason,
+        .improvement-tip {
+            font-size: 0.8rem;
+            color: #555;
+            margin: 0.5rem 0;
+            text-align: left;
+        }
+
+        .label {
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 1rem;
+        }
+
+        .card-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1rem;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .chart-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .strengths-weaknesses-card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .strengths-weaknesses-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .strengths,
+        .weaknesses {
+            width: 100%;
+            margin-bottom: 1.5rem;
+        }
+
+
+        .tooltip {
+            position: absolute;
+            background: white;
+            border: 1px solid #e2e8f0;
+            padding: 0.75rem;
+            border-radius: 8px;
+            display: none;
+            z-index: 10;
+            font-size: 0.875rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 300px;
+        }
+
+        .strength-item,
+        .weakness-item {
+            background-color: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .weakness-item {
+            background-color: #fff0f0;
+            border-left-color: #ef4444;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .skill-bar {
+            height: 12px;
+            background-color: #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .skill-progress {
+            height: 100%;
+            transition: width 1s ease-out;
+        }
+
+        .recommendations-people-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .recommended-people-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .recommended-people-card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            height: 100%;
+        }
+
+        .recommended-people-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .recommended-person {
+            border-left: 4px solid #3b82f6;
+        }
+
+        .recommended-person:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .recommended-person-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 1rem;
+        }
+
+        .recommended-person-info {
+            flex-grow: 1;
+        }
+
+        .recommended-person-name {
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .recommended-person-title {
+            font-size: 0.875rem;
+            color: #666;
+            margin: 0;
+        }
+
+        .experience-relevance-card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            
+        }
+
+        .experience-chart-container {
+            position: relative;
+            height: auto;
+            width: auto;
+        }
+
+        .course-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        .suggestion-item {
+            background-color: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        @media (min-width: 640px) {
+            .recommendations-people-container {
+                grid-template-columns: 2fr 1fr;
+            }
+
+            .recommended-people-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .course-container {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .strengths-weaknesses-content {
+                flex-direction: row;
+            }
+
+            .strengths,
+            .weaknesses {
+                width: 100%;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .recommended-people-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .Recom {
+                margin: -5px;
+            }
+
+            .sugges {
+                margin: -20%;
+                margin-top: -1.05%;
+            }
+
+            .couseimp {
+                margin-top: 19%;
+            }
+
+            .skillana {
+                margin-left: -3%;
+            }
+
+        }
+
+        @media (max-width: 639px) {
+            .rr {
+                margin-left: -20px;
+                /* Adjust this value as needed */
+                margin-right: -20px;
+                /* Adjust this value as needed */
+            }
+
+            .mgn-btm-mob {
+                margin-bottom: 17px;
+            }
+
+
+            .rg {
+                margin-left: -12px;
+                /* Adjust this value as needed */
+                margin-right: -12px;
+                /* Adjust this value as needed */
+            }
+
+            .score-container {
+                max-width: 100%;
+            }
+
+            .mgn-btm {
+                margin-bottom: 17px;
+            }
+
+            .mgn-btm1 {
+                margin-bottom: 47px;
+            }
+
+            .squez {
+                margin-top: -10px;
+            }
+
+            .squez1 {
+                margin-top: -25px;
+            }
+
+            .chart-container {
+                height: 250px;
+            }
+
+            .card-header {
+                font-size: 1.2rem;
+            }
+
+            .hover-info {
+                position: static;
+                transform: none;
+                background-color: transparent;
+                padding: 1rem 0;
+            }
+
+            .dashboard {
+                padding: 10px;
+            }
+
+            .card,
+            .chart-container {
+                padding: 1rem;
+            }
+        }
+
+        .recommended-person {
+            min-height: 70px;
+        }
+
+        .recommended-person-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+        }
+
+        .recommended-person-name {
+            margin-bottom: 0.5rem;
+        }
+
+        .recommended-person-title {
+            align-self: flex-start;
+        }
+
+        @media (max-width: 640px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .warning-message {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.25rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <script>
+        var maxParticleCount = 150; //set max confetti count
+        var particleSpeed = 2; //set the particle animation speed
+        var startConfetti; //call to start confetti animation
+        var stopConfetti; //call to stop adding confetti
+        var toggleConfetti; //call to start or stop the confetti animation depending on whether it's already running
+        var removeConfetti; //call to stop the confetti animation and remove all confetti immediately
+
+        (function () {
+            startConfetti = startConfettiInner;
+            stopConfetti = stopConfettiInner;
+            toggleConfetti = toggleConfettiInner;
+            removeConfetti = removeConfettiInner;
+            var colors = ["DodgerBlue", "OliveDrab", "Gold", "Pink", "SlateBlue", "LightBlue", "Violet", "PaleGreen", "SteelBlue", "SandyBrown", "Chocolate", "Crimson"];
+            var streamingConfetti = false;
+            var animationTimer = null;
+            var particles = [];
+            var waveAngle = 0;
+
+            function resetParticle(particle, width, height) {
+                particle.color = colors[(Math.random() * colors.length) | 0];
+                particle.x = Math.random() * width;
+                particle.y = Math.random() * height - height;
+                particle.diameter = Math.random() * 10 + 5;
+                particle.tilt = Math.random() * 10 - 10;
+                particle.tiltAngleIncrement = Math.random() * 0.07 + 0.05;
+                particle.tiltAngle = 0;
+                return particle;
+            }
+
+            function startConfettiInner() {
+                var width = window.innerWidth;
+                var height = window.innerHeight;
+                window.requestAnimFrame = (function () {
+                    return window.requestAnimationFrame ||
+                        window.webkitRequestAnimationFrame ||
+                        window.mozRequestAnimationFrame ||
+                        window.oRequestAnimationFrame ||
+                        window.msRequestAnimationFrame ||
+                        function (callback) {
+                            return window.setTimeout(callback, 16.6666667);
+                        };
+                })();
+                var canvas = document.getElementById("confetti-canvas");
+                if (canvas === null) {
+                    canvas = document.createElement("canvas");
+                    canvas.setAttribute("id", "confetti-canvas");
+                    document.body.appendChild(canvas);
+                    canvas.width = width;
+                    canvas.height = height;
+                    window.addEventListener("resize", function () {
+                        canvas.width = window.innerWidth;
+                        canvas.height = window.innerHeight;
+                    }, true);
+                }
+                var context = canvas.getContext("2d");
+                while (particles.length < maxParticleCount)
+                    particles.push(resetParticle({}, width, height));
+                streamingConfetti = true;
+                if (animationTimer === null) {
+                    (function runAnimation() {
+                        context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+                        if (particles.length === 0)
+                            animationTimer = null;
+                        else {
+                            updateParticles();
+                            drawParticles(context);
+                            animationTimer = requestAnimFrame(runAnimation);
+                        }
+                    })();
+                }
+                // Show the canvas
+                canvas.style.display = 'block';
+            }
+
+            function stopConfettiInner() {
+                streamingConfetti = false;
+                // Hide the canvas
+                var canvas = document.getElementById("confetti-canvas");
+                if (canvas) {
+                    canvas.style.display = 'none';
+                }
+            }
+
+            function removeConfettiInner() {
+                stopConfetti();
+                particles = [];
+            }
+
+            function toggleConfettiInner() {
+                if (streamingConfetti)
+                    stopConfettiInner();
+                else
+                    startConfettiInner();
+            }
+
+            function drawParticles(context) {
+                var particle;
+                var x;
+                for (var i = 0; i < particles.length; i++) {
+                    particle = particles[i];
+                    context.beginPath();
+                    context.lineWidth = particle.diameter;
+                    context.strokeStyle = particle.color;
+                    x = particle.x + particle.tilt;
+                    context.moveTo(x + particle.diameter / 2, particle.y);
+                    context.lineTo(x, particle.y + particle.tilt + particle.diameter / 2);
+                    context.stroke();
+                }
+            }
+
+            function updateParticles() {
+                var width = window.innerWidth;
+                var height = window.innerHeight;
+                var particle;
+                waveAngle += 0.01;
+                for (var i = 0; i < particles.length; i++) {
+                    particle = particles[i];
+                    if (!streamingConfetti && particle.y < -15)
+                        particle.y = height + 100;
+                    else {
+                        particle.tiltAngle += particle.tiltAngleIncrement;
+                        particle.x += Math.sin(waveAngle);
+                        particle.y += (Math.cos(waveAngle) + particle.diameter + particleSpeed) * 0.5;
+                        particle.tilt = Math.sin(particle.tiltAngle) * 15;
+                    }
+                    if (particle.x > width + 20 || particle.x < -20 || particle.y > height) {
+                        if (streamingConfetti && particles.length <= maxParticleCount)
+                            resetParticle(particle, width, height);
+                        else {
+                            particles.splice(i, 1);
+                            i--;
+                        }
+                    }
+                }
+            }
+        })();
+
+        // Start confetti animation
+        startConfetti();
+
+        // Stop confetti animation after 4 seconds
+        setTimeout(stopConfetti, 4000);
+    </script>
+    <style>
+        /* Ensure the canvas does not affect layout */
+        #confetti-canvas {
+            position: fixed;
+            /* Fixed positioning to keep it in the viewport */
+            top: 0;
+            /* Align it to the top of the viewport */
+            left: 0;
+            /* Align it to the left of the viewport */
+            width: 100vw;
+            /* Full viewport width */
+            height: 100vh;
+            /* Full viewport height */
+            z-index: 999999;
+            /* Ensure it's on top */
+            pointer-events: none;
+            /* Allow clicks to pass through */
+            display: none;
+            /* Initially hidden, will be shown by JavaScript */
+        }
+    </style>
+
+
+    
+
+
+    <div class="bg-gray-50 text-gray-800 dashboard">
+        <!-- <div class="flex ">
+            <span class="text-xl md:text-2xl font-semibold text-blue-600" style="position: absolute;">company2candidate </span>
+        </div>
+       -->
+
+        <style>
+            .dbttn {
+                bottom: 60px;
+                /* Distance from the top */
+                right: 20px;
+                /* Distance from the right */
+            }
+
+            .share {
+                bottom: 120px;
+                /* Distance from the top */
+                right: 20px;
+                /* Distance from the right */
+            }
+
+            .download-btn {
+                position: fixed;
+                /* Fixes the button to the viewport */
+
+                border: 2px solid rgb(0, 0, 0);
+                background-color: white;
+                width: 50px;
+                height: 50px;
+                border-radius: 10px;
+                z-index: 999;
+                /* Ensure it's above other content */
+                transition: all 0.2s ease;
+                cursor: pointer;
+            }
+
+            .download-btn svg {
+                margin-left: 10px;
+
+                width: 25px;
+                height: 25px;
+                transition: all 0.3s ease;
+            }
+
+            .download-btn:hover svg {
+                fill: white;
+            }
+
+            .download-btn:hover {
+                background-color: rgb(0, 0, 0);
+            }
+
+            .tooltip {
+                visibility: hidden;
+                /* Hidden by default */
+                opacity: 0;
+                /* Invisible by default */
+                position: absolute;
+                top: -40px;
+                /* Adjust as needed */
+                right: 0;
+                background-color: rgba(0, 0, 0, 0.75);
+                color: #fff;
+                padding: 5px 10px;
+                border-radius: 5px;
+                white-space: nowrap;
+                /* Prevents text from wrapping */
+                transition: opacity 0.3s ease;
+                z-index: 1000;
+                /* Ensure tooltip is above other content */
+            }
+
+            .download-btn.show-tooltip .tooltip {
+                visibility: visible;
+                opacity: 1;
+            }
+        </style>
+
+
+        <button class="download-btn dbttn">
+            <svg id="printButton" viewBox="0 0 24 24" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M14.29,17.29,13,18.59V13a1,1,0,0,0-2,0v5.59l-1.29-1.3a1,1,0,0,0-1.42,1.42l3,3a1,1,0,0,0,.33.21.94.94,0,0,0,.76,0,1,1,0,0,0,.33-.21l3-3a1,1,0,0,0-1.42-1.42ZM18.42,6.22A7,7,0,0,0,5.06,8.11,4,4,0,0,0,6,16a1,1,0,0,0,0-2,2,2,0,0,1,0-4A1,1,0,0,0,7,9a5,5,0,0,1,9.73-1.61,1,1,0,0,0,.78.67,3,3,0,0,1,.24,5.84,1,1,0,1,0,.5,1.94,5,5,0,0,0,.17-9.62Z">
+                </path>
+            </svg>
+
+
+        </button>
+
+
+
+
+        <main class="container mx-auto px-4 py-8">
+
+            <!-- <h1 class="text-3xl font-bold text-gray-800 mb-8">Your Resume</h1> -->
+            <div class="dashboard-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                <section aria-label="Score Overview" class="col-span-full">
+                    <button class="download-btn share">
+
+                        <svg id="printButton" style="width: 50px; height: 50px; margin-left: 5px; margin-top: 6px;"
+                            viewBox="0 0 24 24" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M 12.5 1 C 11.125 1 10 2.125 10 3.5 C 10 3.671875 10.019531 3.835938 10.050781 4 L 5.519531 6.039063 C 5.0625 5.414063 4.328125 5 3.5 5 C 2.125 5 1 6.125 1 7.5 C 1 8.875 2.125 10 3.5 10 C 4.332031 10 5.074219 9.582031 5.527344 8.949219 L 10.0625 10.964844 C 10.023438 11.136719 10 11.316406 10 11.5 C 10 12.875 11.125 14 12.5 14 C 13.875 14 15 12.875 15 11.5 C 15 10.125 13.875 9 12.5 9 C 11.667969 9 10.925781 9.417969 10.472656 10.050781 L 5.9375 8.039063 C 5.976563 7.863281 6 7.683594 6 7.5 C 6 7.3125 5.976563 7.128906 5.9375 6.953125 L 10.445313 4.914063 C 10.898438 5.570313 11.652344 6 12.5 6 C 13.875 6 15 4.875 15 3.5 C 15 2.125 13.875 1 12.5 1 Z M 12.5 2 C 13.335938 2 14 2.664063 14 3.5 C 14 4.335938 13.335938 5 12.5 5 C 11.664063 5 11 4.335938 11 3.5 C 11 2.664063 11.664063 2 12.5 2 Z M 3.5 6 C 4.335938 6 5 6.664063 5 7.5 C 5 8.335938 4.335938 9 3.5 9 C 2.664063 9 2 8.335938 2 7.5 C 2 6.664063 2.664063 6 3.5 6 Z M 12.5 10 C 13.335938 10 14 10.664063 14 11.5 C 14 12.335938 13.335938 13 12.5 13 C 11.664063 13 11 12.335938 11 11.5 C 11 10.664063 11.664063 10 12.5 10 Z" />
+                        </svg>
+
+
+                    </button>
+
+
+
+
+
+                    <section style="text-align: center; margin-top: -20px; font-size: 20px;">
+
+                        <h2>
+                            The Scores of your resume
+                            <br>
+                            "🧑‍💻 hover for tips 🧑‍💻"
+                            <br>
+
+                        </h2>
+
+
+
+                    </section>
+
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"
+                        style="margin-top: 2%;">
+
+                        <div class="score-container ats-score" style="position: relative; ">
+                            <h4 style="font-size: 15px; font-weight: bold; ">ATS Detectability Score</h4>
+
+                            <div class="circle-progress " style="margin-top: 10px;">
+
+
+                                <svg width="120" height="120" viewBox="0 0 120 120">
+                                    <circle class="circle-progress-background" cx="60" cy="60" r="54" />
+                                    <circle id="atsProgressCircle" class="circle-progress-value" cx="60" cy="60"
+                                        r="54" />
+                                </svg>
+
+
+                                <div id="atsScore" class="score">0%</div>
+
+                            </div>
+                            <p class="description" id="atsDescription"></p>
+                            <div class="hover-info">
+                                <p class="reason"><span class="label">Reason:</span><span id="atsReason"></span></p>
+                                <p class="improvement-tip"><span class="label">Tip:</span><span
+                                        id="atsImprovementTip"></span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="score-container ">
+                            <h4 style="font-size: 15px;   font-weight: bold;">Job Description Score
+
+                            </h4>
+
+                            <div class="circle-progress" style="margin-top: 10px;">
+                                <svg width="120" height="120" viewBox="0 0 120 120">
+                                    <circle class="circle-progress-background" cx="60" cy="60" r="54" />
+                                    <circle id="jdProgressCircle" class="circle-progress-value" cx="60" cy="60"
+                                        r="54" />
+                                </svg>
+                                <div id="jdScore" class="score">0%</div>
+                            </div>
+                            <p class="description" id="jdDescription"></p>
+                            <div class="hover-info">
+                                <p class="reason"><span class="label">Reason:</span><span id="jdReason"></span></p>
+                                <p class="improvement-tip"><span class="label">Tip:</span><span
+                                        id="jdImprovementTip"></span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="score-container">
+                            <h2 class="heading">Overall Score</h2>
+                            <div class="circle-progress">
+                                <svg width="120" height="120" viewBox="0 0 120 120">
+                                    <circle class="circle-progress-background" cx="60" cy="60" r="54" />
+                                    <circle id="overallProgressCircle" class="circle-progress-value" cx="60" cy="60"
+                                        r="54" />
+                                </svg>
+                                <div id="overallScore" class="score">0%</div>
+                            </div>
+                            <p class="description" id="overallDescription"></p>
+                            <div class="hover-info">
+                                <p class="reason"><span class="label">Reason:</span><span id="overallReason"></span></p>
+                                <p class="improvement-tip"><span class="label">Tip:</span><span
+                                        id="overallImprovementTip"></span></p>
+                            </div>
+                        </div>
+
+                        <div class="score-container">
+                            <h4 style="font-size: 15px; font-weight: bold;">Resume Match Score
+
+                            </h4>
+                            <div class="circle-progress" style="margin-top: 10px;">
+                                <svg width="120" height="120" viewBox="0 0 120 120">
+                                    <circle class="circle-progress-background" cx="60" cy="60" r="54" />
+                                    <circle id="rankingProgressCircle" class="circle-progress-value" cx="60" cy="60"
+                                        r="54" />
+                                </svg>
+                                <div id="rankingScore" class="score">0%</div>
+                            </div>
+                            <p class="description" id="rankingDescription"></p>
+                            <div class="hover-info">
+                                <p class="reason"><span class="label">Reason:</span><span id="rankingReason"></span></p>
+                                <p class="improvement-tip"><span class="label">Tip:</span><span
+                                        id="rankingImprovementTip"></span></p>
+                            </div>
+                        </div>
+
+                        <div class="score-container">
+                            <h4 style="font-size: 15px; font-weight: bold;">keywords Alignment
+
+                            </h4>
+                            <div class="circle-progress" style="margin-top: 10px;">
+
+                                <svg width="120" height="120" viewBox="0 0 120 120">
+                                    <circle class="circle-progress-background" cx="60" cy="60" r="54" />
+                                    <circle id="keywordsProgressCircle" class="circle-progress-value" cx="60" cy="60"
+                                        r="54" />
+                                </svg>
+                                <div id="keywordsScore" class="score">0%</div>
+                            </div>
+                            <p class="description" id="keywordsDescription"></p>
+                            <div class="hover-info">
+                                <p class="reason"><span class="label">Reason:</span><span id="keywordsReason"></span>
+                                </p>
+                                <p class="improvement-tip"><span class="label">Tip:</span><span
+                                        id="keywordsImprovementTip"></span></p>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+
+            </section>
+            <section class="company-info">
+                <h2>👇 How much Your projects aligned with the job description 👇 </h2>
+
+
+            </section>
+
+            <section aria-label="Project Impact" class="col-span-full md:col-span-1 sugges rg">
+
+                <div class="container mx-auto px-4 py-8 proj ">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="rr  squez card col-span-1 md:col-span-2 lg:col-span-3" id="project-impact">
+                            <h2 class="card-header">Project Alignment with Job Description</h2>
+                            <div class="card-content flex flex-col lg:flex-row">
+                                <div class="w-full lg:w-2/4">
+                                    <div class="chart-container relative">
+                                        <div class="space-y-4" id="projectAnalysis"></div>
+
+
+                                        <div id="projectDetails"
+                                            class="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-white bg-opacity-90 hidden">
+                                            <div class="p-4 text-center">
+                                                <h3 class="text-xl font-semibold text-gray-700" id="projectTitle"></h3>
+                                                <p class="text-gray-600 mt-2" id="projectDescription"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm mt-4 text-center text-gray-600 " style="width: 100%;"
+                                        id="projectImpactAdvice"></p>
+
+                                </div>
+                                <div class="w-full lg:w-1/2 mt-4 lg:mt-0 lg:ml-4">
+
+                                    <ul id="projectSuggestions" class="space-y-4">
+
+                                    </ul>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class=" mgn-btm-mob  col-span-1 md:col-span-2 lg:col-span-3 Recom"
+                            style="margin-top: 10px; margin-bottom: 10px; font-style: italic; font-size: larger ">
+                            👇<strong>SKILLS</strong> Alignment and <strong>COURSE</strong> Impact with Job Description
+                            and some improvement tips for future 🧑‍💻: </div>
+
+
+
+                        <div
+                            class="squez  recommendations-people-container col-span-1 md:col-span-2 lg:col-span-3 Recom">
+
+                            <div class="card rr mgn-btm squez" id="recommendations">
+                                <h2 class="card-header">Recommendations</h2>
+                                <ul id="recommendationsList" class="list-disc list-inside space-y-2 mt-4"></ul>
+                                <p class="text-sm mt-6 text-gray-600" id="skillsAdvice"></p>
+                            </div>
+                            <div class="rr squez card skillana" id="skills-analysis">
+                                <h2 class="card-header">Skills Analysis</h2>
+                                <div class="card-content">
+                                    <div class="space-y-4" id="skillsAnalysis"></div>
+                                    <div id="showMoreContainer" class="hidden">
+                                      
+                                <button style="color: #3a33ff; padding-top: 20px;  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;   font-weight: bold;" class=" show-more-btn">Show More</button>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+
+                        
+
+                        </div>
+            </section>
+
+
+            <section aria-label="Course Impact" class="col-span-full md:col-span-1 squez1">
+
+
+
+                <div class="card rg couseimp col-span-1 md:col-span-2 lg:col-span-3" id="project-impact">
+                    <h2 class=" card-header">Course Impact</h2>
+
+                    <div class="card-content flex flex-col lg:flex-row">
+                        <div class="w-full lg:w-2/4">
+                            <div class="chart-container relative">
+
+                                <div class="space-y-4" id="courseImpact_Chart"></div>
+
+                            </div>
+
+
+                            <p class="text-sm mt-4 text-gray-600" id="courseAdvice"></p>
+
+
+                        </div>
+
+                        <div class="w-full lg:w-1/2 mt-4 lg:mt-0 lg:ml-4 ">
+
+
+
+                            <h3 class="text-lg font-semibold mb-4">Course Suggestions</h3>
+                            <ul id="courseSuggestionsList" class="space-y-4 " id="course-suggestions">
+                                <!-- Suggestions will be dynamically added here -->
+                            </ul>
+
+
+                        </div>
+                    </div>
+
+                </div>
+
+                <style>
+                    canvas#experienceRelevanceChart {
+                        max-width: 100%;
+                        height: auto;
+                    }
+                </style>
+                <section class="company-info">
+                    <h2>👇 How much your <strong>WORK</strong> is aligning with the job description 👇 </h2>
+
+                </section>
+
+                <div class="recommendations-people-container  col-span-1 md:col-span-2 lg:col-span-3 rg squez">
+                    <div class="experience-relevance-card" id="recommendations">
+                        <h2 class="card-header">Actionable Steps</h2>
+                        <ul id="actionableRecommendationsList" class="space-y-4">
+                            <!-- Actionable recommendations will be dynamically added here -->
+                        </ul>
+                        <p class="text-sm mt-6 text-gray-600" id="Expre"></p>
+                    </div>
+                    <div class="card skillana squez " id="skills-analysis">
+                        <h2 class="card-header">Experience Relevance</h2>
+                        <div class="card-content ">
+                            <div class="space-y-4" id="experienceRelevanceChart"></div>
+
+                            
+                        </div>
+                    </div>
+                </div>
+
+
+
+
+
+
+            </section>
+
+            <section aria-label="Strengths and Weaknesses" style="margin-top: 1%;" class="col-span-full">
+                <div class=" col-span-1 md:col-span-2 lg:col-span-3 Recom"
+                    style="margin-top: 30px; margin-bottom: 20px; font-style: italic; font-size: larger;">👇 Factors
+                    that could lead to your <strong>SELECTION</strong> or <strong>REJECTION </strong>
+
+                    🧑‍💻: </div>
+
+                <div class="card col-span-3 rg" id="strengths-weaknesses">
+                    <h2 class="card-header ">Strengths and Weaknesses</h2>
+                    <div class="strengths-weaknesses-content grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="strengths bg-blue-50 p-6 rounded-lg shadow-md">
+                            <h3 class="text-xl font-semibold text-blue-600 mb-4">Strengths</h3>
+                            <div id="strengthsList" class="space-y-4"></div>
+                        </div>
+                        <div class="weaknesses bg-red-50 p-6 rounded-lg shadow-md">
+                            <h3 class="text-xl font-semibold text-red-600 mb-4">Weaknesses</h3>
+                            <div id="weaknessesList" class="space-y-4"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+
+
+            
+
+
+            <section class="company-info">
+                <h2>👇 People of the Company Where You're Applying 👇 </h2>
+
+
+            </section>
+            
+            <style>
+                .company-info {
+                    padding: 20px;
+                    background-color: #f9f9f9;
+                    border-radius: 8px;
+                    margin-top: 70px;
+
+                }
+
+                .company-info h2 {
+                    font-size: 1.5em;
+                    margin-bottom: 16px;
+                    color: #333;
+                    text-align: center;
+                }
+
+                .recommended-people-container {
+                    display: flex;
+                    flex-wrap: wrap;
+                    justify-content: space-around;
+                }
+            </style>
+
+            <div class="recommended-people-container grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                <div class="recommended-people-card bg-white rounded-lg shadow-md p-4">
+
+                    <h2 class="card-header text-xl font-semibold mb-4">Meet with staff from this company.</h2>
+                    <img width="50px" src="https://img.icons8.com/?size=100&id=xuvGCOXi8Wyg&format=png&color=000000"
+                        alt="" style="margin-left: 40%;">
+                    <ul id="recommendedPeopleList" class="recommended-people-list space-y-4">
+                        <!-- LinkedIn recommendations will be dynamically added here -->
+                    </ul>
+                </div>
+
+                <div class="recommended-people-card bg-white rounded-lg shadow-md p-4">
+                    <h2 class="card-header text-xl font-semibold mb-4">Meet with staff from this company.</h2>
+                    <img width="48" height="48" style="margin-left: 43%;"
+                        src="https://img.icons8.com/fluency/48/instagram-new.png" alt="instagram-new" />
+
+                    <ul id="recommendedPeopleInstagramList" class="recommended-people-list space-y-4">
+                        <!-- Instagram recommendations will be dynamically added here -->
+                    </ul>
+
+                </div>
+
+                <div class="recommended-people-card bg-white rounded-lg shadow-md p-4">
+                    <h2 class="card-header text-xl font-semibold mb-4">Meet with staff from this company.
+                    </h2>
+                    <img width="50" height="50" style="margin-left: 43%;"
+                        src="https://img.icons8.com/ios-filled/50/twitterx--v1.png" alt="twitterx--v1" />
+                    <ul id="recommendedPeopleTwitterList" class="recommended-people-list space-y-4">
+                        <!-- Twitter recommendations will be dynamically added here -->
+                    </ul>
+
+                </div>
+            </div>
+                  
+                </div>
+            </div>
+            
+
+    </section>
+
+    <script>         
+            function createExperienceRelevanceChart(data) {
+            const projectContainer = document.getElementById('experienceRelevanceChart');
+            const experience_registence = data.experience_relevance.imp;
+
+            function getColor(score) {
+                if (score < 40) {
+                    const factor = score / 40;
+                    return `rgb(255, ${Math.round(65 + 155 * factor)}, ${Math.round(54 + 166 * factor)})`;
+                } else if (score < 70) {
+                    const factor = (score - 40) / 30;
+                    return `rgb(${Math.round(255 - 209 * factor) + 40}, ${Math.round(220 - 16 * factor) - 26}, ${Math.round(0 + 64 * factor) - 18})`;
+                } else {
+                    const factor = (score - 70) / 30;
+                    return `rgb(${Math.round(46 - 46 * factor) + 28}, ${Math.round(204 - 51 * factor) - 26}, ${Math.round(64 + 191 * factor) - 216})`;
+                }
+            }
+
+            Object.entries(experience_registence).forEach(([proj, score]) => {
+                const projectElement = document.createElement('div');
+                projectElement.className = 'mb-4';
+                projectElement.innerHTML = `
+            <div class="flex items-center justify-between mb-1">
+                <span class="text-sm font-medium text-gray-700">${proj}</span>
+                <span class="text-sm font-medium text-gray-700">${score}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div class="h-2.5 rounded-full transition-all duration-500 ease-out" style="width: 0%; background-color: ${getColor(score)}"></div>
+            </div>
+        `;
+                projectContainer.appendChild(projectElement);
+
+                // Animate the proj bar
+                setTimeout(() => {
+                    const progressBar = projectElement.querySelector('.rounded-full div');
+                    progressBar.style.width = `${score}%`;
+                }, 100);
+            });
+            document.getElementById('Expre').textContent = data.experience_relevance.advice;
+
+
+
+
+
+
+        }
+        function initRecommendedPeople(recommendedPeople, listId) {
+    const recommendedPeopleList = document.getElementById(listId);
+    console.log("Initializing recommended people for:", listId);
+    console.log("Recommended people data:", recommendedPeople);
+
+    if (!recommendedPeopleList) {
+        console.error(`Element with id ${listId} not found`);
+        return;
+    }
+
+    recommendedPeopleList.innerHTML = ''; // Clear the list before adding new items
+
+    if (!Array.isArray(recommendedPeople) || recommendedPeople.length === 0) {
+        console.warn(`No recommended people data for ${listId}`);
+        recommendedPeopleList.innerHTML = '<li>No recommendations available</li>';
+        return;
+    }
+
+    recommendedPeople.forEach(person => {
+        const li = document.createElement('li');
+        li.className = 'recommended-person bg-white rounded-lg shadow-sm p-4 transition duration-300 ease-in-out transform hover:scale-105';
+        
+        const buttonText = person.link ? 'View Profile' : 'No Profile';
+        const buttonClass = person.link 
+            ? 'bg-blue-500 hover:bg-blue-600 cursor-pointer' 
+            : 'bg-gray-400 cursor-not-allowed';
+
+        li.innerHTML = `
+            <div class="flex items-center space-x-4">
+                <div class="recommended-person-info flex-grow">
+                    <div class="flex justify-between items-center">
+                        <p class="recommended-person-name text-sm font-semibold text-gray-800">${person.name}</p>
+                        <button class="recommended-person-button ${buttonClass} text-white font-bold py-1 px-4 rounded-full text-xs transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75">
+                            ${buttonText}
+                        </button>
+                    </div>
+                    <p class="recommended-person-title text-xs text-gray-600 mt-1">${person.position}</p>
+                </div>
+            </div>
+        `;
+
+        if (person.link) {
+            li.querySelector('.recommended-person-button').addEventListener('click', (e) => {
+                e.preventDefault();
+                const windowFeatures = "width=600,height=600,resizable=yes,scrollbars=yes,status=yes";
+                window.open(person.link, "PersonProfile", windowFeatures);
+            });
+        }
+
+        recommendedPeopleList.appendChild(li);
+    });
+
+    console.log(`Added ${recommendedPeople.length} people to ${listId}`);
+}
+
+        document.addEventListener('DOMContentLoaded', function() {
+    const safeDecodeURIComponent = (str) => {
+        if (!str) return '';
+        try {
+            return decodeURIComponent(str.replace(/\+/g, ' '));
+        } catch (e) {
+            console.error("Error decoding:", str, e);
+            return str; // Return the original string if decoding fails
+        }
+    };
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success') === 'true';
+
+    if (success) {
+        try {
+            const apiResponseStr = safeDecodeURIComponent(urlParams.get('apiResponse'));
+            const data = JSON.parse(apiResponseStr);
+
+            // Initialize dashboard components with the data
+            initDashboard(data);
+        } catch (error) {
+            console.error("Error processing success response:", error);
+            
+        }
+    } else {
+        const errorMessage = safeDecodeURIComponent(urlParams.get('errorMessage'));
+        displayError(errorMessage || "An unknown error occurred.");
+    }
+});
+
+function displayError(message) {
+    // Create an error message element if it doesn't exist
+    let errorElement = document.getElementById('errorMessage');
+    if (!errorElement) {
+        errorElement = document.createElement('div');
+        errorElement.id = 'errorMessage';
+        errorElement.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative';
+        document.body.insertBefore(errorElement, document.body.firstChild);
+    }
+
+    errorElement.textContent = message;
+
+    // Show retry link
+    const retryLink = document.getElementById('retryLink');
+    if (retryLink) {
+        retryLink.style.display = 'block';
+    }
+}
+
+
+
+        
+
+  
+        function updateScore(id, data) {
+
+            const scoreElement = document.getElementById(`${id}Score`);
+            const progressCircle = document.getElementById(`${id}ProgressCircle`);
+            const descriptionElement = document.getElementById(`${id}Description`);
+            const reasonElement = document.getElementById(`${id}Reason`);
+            const improvementTipElement = document.getElementById(`${id}ImprovementTip`);
+
+            if (!scoreElement || !progressCircle || !descriptionElement || !reasonElement || !improvementTipElement) {
+                console.error(`Missing elements for ${id}`);
+                return;
+            }
+
+            const targetScore = data.score;
+            const circumference = 2 * Math.PI * 54;
+
+            progressCircle.style.strokeDasharray = circumference;
+            progressCircle.style.strokeDashoffset = circumference;
+
+            let currentScore = 0;
+            const duration = 2000; // 2 seconds
+            const startTime = performance.now();
+
+            function getColor(score) {
+                if (score < 40) return [255, 65, 54]; // Red
+                if (score < 70) return [255, 220, 0]; // Yellow
+                return [46, 204, 64]; // Green
+            }
+
+            function interpolateColor(color1, color2, factor) {
+                return color1.map((channel, index) =>
+                    Math.round(channel + factor * (color2[index] - channel))
+                );
+            }
+
+            function easeOutQuad(t) {
+                return t * (2 - t);
+            }
+
+            function animateScore(currentTime) {
+                const elapsedTime = currentTime - startTime;
+                if (elapsedTime < duration) {
+                    const progress = easeOutQuad(elapsedTime / duration);
+                    currentScore = Math.min(Math.floor(progress * targetScore), targetScore);
+                    scoreElement.textContent = currentScore + '%';
+
+                    const fillPercentage = currentScore / 100;
+                    const dashoffset = circumference * (1 - fillPercentage);
+                    progressCircle.style.strokeDashoffset = dashoffset;
+
+                    const startColor = getColor(Math.max(0, currentScore - 1));
+                    const endColor = getColor(currentScore);
+                    const interpolatedColor = interpolateColor(startColor, endColor, (elapsedTime % (duration / targetScore)) / (duration / targetScore));
+                    progressCircle.style.stroke = `rgb(${interpolatedColor.join(',')})`;
+
+                    requestAnimationFrame(animateScore);
+                } else {
+                    scoreElement.textContent = targetScore + '%';
+                    scoreElement.textContent = targetScore + '%';
+                }
+            }
+
+            requestAnimationFrame(animateScore);
+
+            descriptionElement.textContent = data.description;
+            reasonElement.textContent = data.reason;
+            improvementTipElement.textContent = data.improvementTip;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            Object.keys(data).forEach(key => {
+                updateScore(key, data[key]);
+            });
+        });
+    </script>
+
+
+    <script>
+         function createListItem(person) {
+        return `
+            <li>
+                <a href="${person.link}" target="_blank">
+                    ${person.name} - ${person.title}
+                </a>
+            </li>
+        `;
+    }
+        let data;
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+        const safeDecodeURIComponent = (str) => {
+            if (!str) return '';
+            try {
+                return decodeURIComponent(str.replace(/\+/g, ' '));
+            } catch (e) {
+                console.error("Error decoding:", str, e);
+                return str; // Return the original string if decoding fails
+            }
+        };
+    
+        const urlParams = new URLSearchParams(window.location.search);
+        const success = urlParams.get('success') === 'true';
+    
+        
+    
+        if (success) {
+            try {
+                
+                const apiResponseStr = safeDecodeURIComponent(urlParams.get('apiResponse'));
+                data = JSON.parse(apiResponseStr);
+                initDashboard(data);
+                console.log("talking from api responce ",apiResponse)
+    
+            } catch (error) {
+                console.error("Error processing success response:", error);
+              
+            }
+        } else {
+            const errorMessage = safeDecodeURIComponent(urlParams.get('errorMessage'));
+           
+            if (errorMessage) {
+                extractedTextElement.innerHTML = `<h2>Error Details:</h2><pre>${errorMessage}</pre>`;
+            }
+            retryLink.style.display = 'block';
+        }
+    });
+
+
+        function initDashboard(data) {
+            createExperienceRelevanceChart(data);
+            initRecommendations(data.recommendations);
+              function initActionableRecommendations(recommendations) {
+            const recommendationsList = document.getElementById('actionableRecommendationsList');
+            recommendationsList.innerHTML = ''; // Clear existing items
+
+            recommendations.forEach((recommendation, index) => {
+                const li = document.createElement('li');
+                li.className = 'bg-white rounded-lg shadow-md p-4 transition duration-300 ease-in-out transform hover:scale-105';
+                li.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="text-blue-500 font-bold mr-3">${index + 1}.</span>
+                        <p class="text-gray-700">${recommendation}</p>
+                    </div>
+                `;
+                recommendationsList.appendChild(li);
+            });
+
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // fetchRecommendedPeople();
+        });
+        console.log("data",data)
+        console.log("data",data.recommended_People_linkdin)
+            initActionableRecommendations(data["Actionable Recommendations"])
+            initSkillsAnalysis(data);
+            createProjectImpactChart();
+            createCourseImpactChart(data);
+            initStrengthsWeaknesses();
+            initCourseSuggestions(data); // Add this line
+            
+    initRecommendedPeople(data.recommended_People_linkdin, 'recommendedPeopleList');
+    initRecommendedPeople(data.recommendedPeople_instagram, 'recommendedPeopleInstagramList');
+    initRecommendedPeople(data.recommendedPeople_twitter, 'recommendedPeopleTwitterList');
+
+            
+
+        }
+
+        function initCourseSuggestions(data) {
+            const suggestionsList = document.getElementById('courseSuggestionsList');
+            suggestionsList.innerHTML = ''; // Clear existing items
+                console.log("course_suggestions",data.course_impact)
+            const suggestions = [
+                { title: "Course Suggestion 1", content: data.course_impact.suggestion1 },
+                { title: "Course Suggestion 2", content: data.course_impact.suggestion2 },
+                { title: "Course Suggestion 3", content: data.course_impact.suggestion3 }
+            ];
+
+            suggestions.forEach((suggestion, index) => {
+                const li = document.createElement('li');
+                li.className = 'suggestion-item';
+                li.innerHTML = `
+                
+                <p class="mt-1 text-sm text-gray-700">${suggestion.content}</p>
+            `;
+                suggestionsList.appendChild(li);
+            });
+
+        }
+
+
+        function animateValue(element, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                element.textContent = `${Math.floor(progress * (end - start) + start)}%`;
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+        function initStrengthsWeaknesses() {
+            const strengthsList = document.getElementById('strengthsList');
+            const weaknessesList = document.getElementById('weaknessesList');
+
+            // Populate strengths
+            Object.entries(data.Strengths).forEach(([key, value]) => {
+                const strengthItem = document.createElement('div');
+                strengthItem.className = 'strength-item';
+                strengthItem.innerHTML = `<strong>${key}:</strong> ${value}`;
+                strengthsList.appendChild(strengthItem);
+            });
+
+            // Populate weaknesses
+            Object.entries(data.Weaknesses).forEach(([key, value]) => {
+                const weaknessItem = document.createElement('div');
+                weaknessItem.className = 'weakness-item';
+                weaknessItem.innerHTML = `<strong>${key}:</strong> ${value}`;
+                weaknessesList.appendChild(weaknessItem);
+            });
+        }
+        function initSkillsAnalysis(data) {
+            const skillsContainer = document.getElementById('skillsAnalysis');
+            const showMoreContainer = document.getElementById('showMoreContainer');
+            const showMoreBtn = showMoreContainer.querySelector('.show-more-btn');
+            let isExpanded = false;
+
+            const skills = data.skill_Score.skills_ratio;
+            const skillEntries = Object.entries(skills);
+
+            function getColor(score) {
+                if (score < 40) {
+                    const factor = score / 40;
+                    return `rgb(255, ${Math.round(65 + 155 * factor)}, ${Math.round(54 + 166 * factor)})`;
+                } else if (score < 70) {
+                    const factor = (score - 40) / 30;
+                    return `rgb(${Math.round(255 - 209 * factor) + 40}, ${Math.round(220 - 16 * factor) - 26}, ${Math.round(0 + 64 * factor) - 18})`;
+                } else {
+                    const factor = (score - 70) / 30;
+                    return `rgb(${Math.round(46 - 46 * factor) + 28}, ${Math.round(204 - 51 * factor) - 26}, ${Math.round(64 + 191 * factor) - 216})`;
+                }
+            }
+
+            function renderSkills() {
+                skillsContainer.innerHTML = '';
+                const visibleSkills = isExpanded ? skillEntries : skillEntries.slice(0, 4);
+
+                visibleSkills.forEach(([skill, score]) => {
+                    const skillElement = document.createElement('div');
+                    skillElement.className = 'mb-4';
+                    skillElement.innerHTML = `
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-medium text-gray-700">${skill}</span>
+                            <span class="text-sm font-medium text-gray-700">${score}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="skill-bar h-2.5 rounded-full" style="width: 0%; background-color: ${getColor(score)}"></div>
+                        </div>
+                    `;
+                    skillsContainer.appendChild(skillElement);
+
+                    setTimeout(() => {
+                        const progressBar = skillElement.querySelector('.skill-bar');
+                        progressBar.style.width = `${score}%`;
+                    }, 100);
+                });
+
+                showMoreContainer.classList.toggle('hidden', skillEntries.length <= 4);
+                showMoreBtn.textContent = isExpanded ? 'Show Less' : 'Show More';
+            }
+
+            showMoreBtn.addEventListener('click', () => {
+                isExpanded = !isExpanded;
+                renderSkills();
+            });
+
+            renderSkills();
+            document.getElementById('skillsAdvice').textContent = data.skill_Score.advice;
+        }
+        function createProjectImpactChart() {
+
+
+
+
+            const projectContainer = document.getElementById('projectAnalysis');
+            const pjt = data.project_impact.impact;
+
+            function getColor(score) {
+                if (score < 40) {
+                    const factor = score / 40;
+                    return `rgb(255, ${Math.round(65 + 155 * factor)}, ${Math.round(54 + 166 * factor)})`;
+                } else if (score < 70) {
+                    const factor = (score - 40) / 30;
+                    return `rgb(${Math.round(255 - 209 * factor) + 40}, ${Math.round(220 - 16 * factor) - 26}, ${Math.round(0 + 64 * factor) - 18})`;
+                } else {
+                    const factor = (score - 70) / 30;
+                    return `rgb(${Math.round(46 - 46 * factor) + 28}, ${Math.round(204 - 51 * factor) - 26}, ${Math.round(64 + 191 * factor) - 216})`;
+                }
+            }
+
+            Object.entries(pjt).forEach(([proj, score]) => {
+                const projectElement = document.createElement('div');
+                projectElement.className = 'mb-4';
+                projectElement.innerHTML = `
+        <div class="flex items-center justify-between mb-1">
+            <span class="text-sm font-medium text-gray-700">${proj}</span>
+            <span class="text-sm font-medium text-gray-700">${score}%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div class="h-2.5 rounded-full transition-all duration-500 ease-out" style="width: 0%; background-color: ${getColor(score)}"></div>
+        </div>
+    `;
+                projectContainer.appendChild(projectElement);
+
+                // Animate the proj bar
+                setTimeout(() => {
+                    const progressBar = projectElement.querySelector('.rounded-full div');
+                    progressBar.style.width = `${score}%`;
+                }, 100);
+            });
+
+
+
+
+
+
+
+
+
+
+
+
+            document.getElementById('projectImpactAdvice').textContent = data.project_impact.advice;
+
+            document.getElementById('projectImpactAdvice').textContent = data.project_impact.advice;
+            const suggestionsContainer = document.getElementById('projectSuggestions');
+            const suggestions = [
+                data.project_impact.suggestion1,
+                data.project_impact.suggestion2,
+                data.project_impact.suggestion3,
+
+
+
+
+            ];
+
+
+
+
+            suggestions.forEach((suggestion, index) => {
+                const li = document.createElement('li');
+                li.className = 'bg-blue-50 p-3 rounded-lg shadow-sm';
+                li.innerHTML = `                    
+                <p class="mt-1 text-sm text-gray-700">${suggestion}</p>
+            `;
+                suggestionsContainer.appendChild(li);
+            });
+
+
+
+
+        }
+        function createCourseImpactChart(data) {
+
+
+            const projectContainer = document.getElementById('courseImpact_Chart');
+            
+            const course_imt = data.course_impact.course_impact.impt;
+            
+            function getColor(score) {
+                if (score < 40) {
+                    const factor = score / 40;
+                    return `rgb(255, ${Math.round(65 + 155 * factor)}, ${Math.round(54 + 166 * factor)})`;
+                } else if (score < 70) {
+                    const factor = (score - 40) / 30;
+                    return `rgb(${Math.round(255 - 209 * factor) + 40}, ${Math.round(220 - 16 * factor) - 26}, ${Math.round(0 + 64 * factor) - 18})`;
+                } else {
+                    const factor = (score - 70) / 30;
+                    return `rgb(${Math.round(46 - 46 * factor) + 28}, ${Math.round(204 - 51 * factor) - 26}, ${Math.round(64 + 191 * factor) - 216})`;
+                }
+            }
+
+            Object.entries(course_imt).forEach(([proj, score]) => {
+                const course_element = document.createElement('div');
+                course_element.className = 'mb-4';
+                course_element.innerHTML = `
+        <div class="flex items-center justify-between mb-1">
+            <span class="text-sm font-medium text-gray-700">${proj}</span>
+            <span class="text-sm font-medium text-gray-700">${score}%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div class="h-2.5 rounded-full transition-all duration-500 ease-out" style="width: 0%; background-color: ${getColor(score)}"></div>
+        </div>
+    `;
+                projectContainer.appendChild(course_element);
+
+                // Animate the proj bar
+                setTimeout(() => {
+                    const progressBar = course_element.querySelector('.rounded-full div');
+                    progressBar.style.width = `${score}%`;
+                }, 100);
+            });
+
+            document.getElementById('courseAdvice').textContent = data.course_impact.course_advice;
+
+        }
+        function initRecommendations() {
+    const recommendationsList = document.getElementById('recommendationsList');
+    data.recommendations.forEach((recommendation, index) => {
+        const li = document.createElement('li');
+        li.className = 'recommendation-item opacity-0 transform translate-y-4 transition-all duration-500 ease-out';
+
+        // Check if the recommendation contains a search query
+        if (recommendation.includes('site:linkedin.com')) {
+            const searchQuery = recommendation.match(/site:linkedin\.com.*"/)[0];
+            const encodedQuery = encodeURIComponent(searchQuery);
+            const googleSearchUrl = `https://www.google.com/search?q=${encodedQuery}`;
+            
+            li.innerHTML = `
+                <a href="${googleSearchUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">
+                    ${recommendation.replace(searchQuery, 'LinkedIn Search')}
+                </a>
+            `;
+        } else {
+            li.textContent = recommendation;
+        }
+
+        recommendationsList.appendChild(li);
+
+        setTimeout(() => {
+            li.classList.remove('opacity-0', 'translate-y-4');
+        }, index * 200);
+    });
+}
+
+        function initPrintFunction() {
+            document.getElementById('printButton').addEventListener('click', () => {
+                window.print();
+            });
+        }
+
+        function initSmoothScrolling() {
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+        }
+
+
+
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+        const safeDecodeURIComponent = (str) => {
+            if (!str) return '';
+            try {
+                return decodeURIComponent(str.replace(/\+/g, ' '));
+            } catch (e) {
+                console.error("Error decoding:", str, e);
+                return str; // Return the original string if decoding fails
+            }
+        };
+    
+        const urlParams = new URLSearchParams(window.location.search);
+        const success = urlParams.get('success') === 'true';
+    
+        
+    
+        if (success) {
+            try {
+                
+                const apiResponseStr = safeDecodeURIComponent(urlParams.get('apiResponse'));
+                const data = JSON.parse(apiResponseStr);
+
+                
+                const scoreCard = data.score_card;
+                    Object.keys(scoreCard).forEach(key => {
+                        updateScore(key, scoreCard[key]);
+                    });
+
+                    // Call other initialization functions here
+                    initSkillsAnalysis(data.skill_Score);
+                    
+
+                    initStrengthsWeaknesses(data.Strengths, data.Weaknesses);
+                    createCourseImpactChart(data);
+    
+            } catch (error) {
+                console.error("Error processing success response:", error);
+              
+            }
+        } else {
+            const errorMessage = safeDecodeURIComponent(urlParams.get('errorMessage'));
+           
+            if (errorMessage) {
+                extractedTextElement.innerHTML = `<h2>Error Details:</h2><pre>${errorMessage}</pre>`;
+            }
+            retryLink.style.display = 'block';
+        }
+    });
+
+      
+
+        // document.addEventListener('DOMContentLoaded', fetchData);
+
+
+
+        document.getElementById('printButton').addEventListener('click', function () {
+        // Options for the PDF
+        var opt = {
+            margin: 0, // Reduce margins to fit content better
+            filename: 'Full_report.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 3 }, // Increase scale for better resolution
+            jsPDF: { unit: 'px', format: [window.innerWidth, document.body.scrollHeight], orientation: 'portrait' } // Use px and set dimensions to cover entire height
+        };
+
+        // Get the entire dashboard content
+        var element = document.body;
+
+        // Generate the PDF
+        html2pdf().set(opt).from(element).save();
+    });
+
+        
+    </script>
+
+
+</body>
+
+</html>

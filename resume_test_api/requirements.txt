@@ -1,0 +1,6 @@
+Flask
+flask-cors
+langchain-groq
+python-dotenv
+numpy
+pymongo
