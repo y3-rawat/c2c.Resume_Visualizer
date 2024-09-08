@@ -31,6 +31,13 @@ Located in the `resume_test_api/` directory:
 
 1. Ensure you have Python and Node.js installed on your system.
 2. Clone this repository to your local machine.
+```
+git clone https://github.com/y3-rawat/c2c.Resume_Visualizer.git
+```
+Locate to the project directory
+```
+cd c2c.Resume_Visualizer
+```
 3. Run the `run.py` script:
 
    ```python
